@@ -1,3 +1,10 @@
+# Project Contributers
+
+ayushi pandey
+yashvi patel
+akshat awasthi
+chirag deore
+
 # Traveloop
 
 Personalized travel-planning web app — pure HTML/CSS/JS, runs as a static site.

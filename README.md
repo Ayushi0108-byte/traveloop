@@ -1,4 +1,4 @@
-# Project Contributers
+# Project Members
 
 ayushi pandey
 yashvi patel

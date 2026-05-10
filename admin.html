@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Admin Analytics — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<div id="nav"></div>
+<div class="container" id="main"></div>
+<script src="app.js"></script>
+<script>
+if(!requireAuth()){} else {
+  document.getElementById('nav').innerHTML = renderNav();
+  const d=db();
+  const cityCount={}, actCount={};
+  d.trips.forEach(t=>(t.stops||[]).forEach(s=>{cityCount[s.city]=(cityCount[s.city]||0)+1;(s.activities||[]).forEach(a=>{actCount[a.name]=(actCount[a.name]||0)+1;});}));
+  const top=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('main').innerHTML=`
+    <h1>Admin Analytics</h1>
+    <div class="grid cols-3">
+      <div class="card"><div class="muted">Users</div><h2>${d.users.length}</h2></div>
+      <div class="card"><div class="muted">Trips</div><h2>${d.trips.length}</h2></div>
+      <div class="card"><div class="muted">Total est. bookings</div><h2>${fmt$(d.trips.reduce((s,t)=>s+tripCost(t),0))}</h2></div>
+    </div>
+    <div class="grid cols-2" style="margin-top:18px">
+      <div class="card"><h3>Top Cities</h3>${top(cityCount).map(([c,n])=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span>${c}</span><b>${n}</b></div>`).join('')||'<p class="muted">No data</p>'}</div>
+      <div class="card"><h3>Top Activities</h3>${top(actCount).map(([c,n])=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span>${c}</span><b>${n}</b></div>`).join('')||'<p class="muted">No data</p>'}</div>
+    </div>
+    <h3 style="margin-top:18px">Users</h3>
+    <div class="card"><table style="width:100%;border-collapse:collapse">
+      <thead><tr style="text-align:left;color:var(--muted);font-size:13px"><th>Name</th><th>Email</th><th>Joined</th><th>Trips</th></tr></thead>
+      <tbody>${d.users.map(u=>`<tr style="border-top:1px solid var(--border)"><td style="padding:8px 0">${u.name}</td><td>${u.email}</td><td>${fmtDate(u.createdAt)}</td><td>${d.trips.filter(t=>t.userId===u.id).length}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+}
+</script></body></html>

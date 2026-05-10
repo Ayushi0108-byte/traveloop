@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Create Trip — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<div id="nav"></div>
+<div class="container" style="max-width:680px">
+  <h1>Plan a New Trip</h1>
+  <p class="muted">Give your adventure a name and dates. You can add cities and activities next.</p>
+  <div class="card">
+    <label>Trip name</label><input id="name" class="input" placeholder="Europe Summer 2026"/>
+    <div class="row">
+      <div style="flex:1"><label>Start date</label><input id="start" type="date" class="input"/></div>
+      <div style="flex:1"><label>End date</label><input id="end" type="date" class="input"/></div>
+    </div>
+    <label>Description</label><textarea id="desc" class="input" placeholder="A 2-week adventure across Europe..."></textarea>
+    <label>Cover photo URL (optional)</label><input id="cover" class="input" placeholder="https://..."/>
+    <label>Transport budget (flights/trains, $)</label><input id="trans" type="number" class="input" placeholder="800"/>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn primary" onclick="create()">Create Trip</button>
+      <a class="btn" href="trips.html">Cancel</a>
+    </div>
+    <div id="err" style="color:var(--danger);margin-top:8px"></div>
+  </div>
+</div>
+<script src="app.js"></script>
+<script>
+if(!requireAuth()){} else { document.getElementById('nav').innerHTML = renderNav('create-trip.html'); }
+function create(){
+  const name=document.getElementById('name').value.trim();
+  const start=document.getElementById('start').value;
+  const end=document.getElementById('end').value;
+  if(!name) return document.getElementById('err').textContent='Trip name required.';
+  if(start && end && new Date(end)<new Date(start)) return document.getElementById('err').textContent='End date must be after start date.';
+  const t={
+    id: uid('t'), userId: currentUser().id, name,
+    startDate: start, endDate: end,
+    description: document.getElementById('desc').value,
+    cover: document.getElementById('cover').value,
+    transportBudget: Number(document.getElementById('trans').value)||0,
+    stops: [], shared:false, createdAt:Date.now()
+  };
+  saveTrip(t); toast('Trip created!');
+  setTimeout(()=> location.href='itinerary.html?id='+t.id, 400);
+}
+</script></body></html>

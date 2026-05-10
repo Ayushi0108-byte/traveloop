@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Share Trip — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<div id="nav"></div>
+<div class="container" id="main"></div>
+<script src="app.js"></script>
+<script>
+if(!requireAuth()){} else {
+  document.getElementById('nav').innerHTML = renderNav();
+  const trip=getTrip(getQuery('id'));
+  if(!trip){document.getElementById('main').innerHTML='<div class="empty">Trip not found</div>';} else render(trip);
+}
+function render(trip){
+  const url = location.origin + location.pathname.replace('share.html','public.html') + '?id='+trip.id;
+  document.getElementById('main').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center"><h1>Share — ${trip.name}</h1>
+      <a class="btn" href="itinerary.html?id=${trip.id}">← Itinerary</a></div>
+    <div class="card">
+      <label><input type="checkbox" ${trip.shared?'checked':''} onchange="toggleShared('${trip.id}',this.checked)"/> Make this trip publicly viewable</label>
+      ${trip.shared?`
+        <label>Public link</label>
+        <div class="row"><input id="url" class="input" value="${url}" readonly style="flex:1"/>
+          <button class="btn primary" onclick="navigator.clipboard.writeText(document.getElementById('url').value);toast('Link copied!')">Copy</button></div>
+        <div class="row" style="margin-top:10px">
+          <a class="btn" target="_blank" href="https://twitter.com/intent/tweet?text=Check%20out%20my%20trip!&url=${encodeURIComponent(url)}">Share on X</a>
+          <a class="btn" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}">Share on Facebook</a>
+          <a class="btn" target="_blank" href="${url}">Open public view</a>
+        </div>`:'<p class="muted">Toggle on to generate a public link.</p>'}
+    </div>`;
+}
+function toggleShared(id,v){const t=getTrip(id);t.shared=v;saveTrip(t);location.reload();}
+</script></body></html>

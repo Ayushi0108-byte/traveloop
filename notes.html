@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Notes — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<div id="nav"></div>
+<div class="container" style="max-width:780px" id="main"></div>
+<script src="app.js"></script>
+<script>
+let trip;
+if(!requireAuth()){} else {
+  document.getElementById('nav').innerHTML = renderNav();
+  trip=getTrip(getQuery('id'));
+  if(!trip){document.getElementById('main').innerHTML='<div class="empty">Trip not found</div>';} else render();
+}
+function render(){
+  const notes=getNotes(trip.id);
+  document.getElementById('main').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center"><h1>${trip.name} — Notes</h1>
+      <a class="btn" href="itinerary.html?id=${trip.id}">← Itinerary</a></div>
+    <div class="card">
+      <textarea id="note" class="input" placeholder="Hotel check-in code, local contact, packing reminder..."></textarea>
+      <button class="btn primary" style="margin-top:8px" onclick="add()">Add Note</button>
+    </div>
+    <div style="margin-top:14px">
+      ${notes.length? notes.map(n=>`
+        <div class="card" style="margin-bottom:10px">
+          <div class="muted" style="font-size:12px">${new Date(n.createdAt).toLocaleString()}</div>
+          <p style="white-space:pre-wrap;margin:6px 0">${n.text.replace(/</g,'&lt;')}</p>
+          <button class="btn sm danger" onclick="deleteNote('${n.id}');render()">Delete</button>
+        </div>`).join('') : '<div class="empty">No notes yet.</div>'}
+    </div>`;
+}
+function add(){const t=document.getElementById('note').value.trim();if(!t)return;addNote(trip.id,t);render();}
+</script></body></html>

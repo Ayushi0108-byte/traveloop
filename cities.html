@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Cities — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<div id="nav"></div>
+<div class="container">
+  <h1>Discover Cities</h1>
+  <div class="row" style="margin-bottom:14px">
+    <input id="q" class="input" placeholder="Search cities or countries..." oninput="render()" style="flex:1"/>
+    <select id="region" class="select" onchange="render()" style="max-width:200px">
+      <option value="">All countries</option>
+    </select>
+  </div>
+  <div id="grid"></div>
+</div>
+<script src="app.js"></script>
+<script>
+if(!requireAuth()){} else {
+  document.getElementById('nav').innerHTML = renderNav('cities.html');
+  const r=document.getElementById('region');
+  [...new Set(db().cities.map(c=>c.country))].sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;r.appendChild(o);});
+  const f=getQuery('focus'); if(f) document.getElementById('q').value=f;
+  render();
+}
+function render(){
+  const q=document.getElementById('q').value.toLowerCase();
+  const region=document.getElementById('region').value;
+  const list=db().cities.filter(c=>(!q||c.name.toLowerCase().includes(q)||c.country.toLowerCase().includes(q))&&(!region||c.country===region));
+  document.getElementById('grid').innerHTML = `<div class="grid cols-3">${list.map(c=>`
+    <div class="card hoverable" style="padding:0;overflow:hidden">
+      <div style="height:160px;background:url('${c.img}') center/cover"></div>
+      <div style="padding:14px">
+        <div style="display:flex;justify-content:space-between"><h3 style="margin:0">${c.name}</h3><span class="badge">★ ${c.popularity}</span></div>
+        <div class="muted" style="font-size:13px">${c.country} · cost index ${fmt$(c.cost)}/day</div>
+        <div style="margin-top:10px"><button class="btn sm primary" onclick='openAdd(${JSON.stringify(c)})'>+ Add to Trip</button></div>
+      </div>
+    </div>`).join('')||'<div class="card empty">No matches</div>'}</div>`;
+}
+function openAdd(c){
+  const trips=getMyTrips();
+  if(!trips.length){ if(confirm('You have no trips. Create one now?')) location.href='create-trip.html'; return; }
+  const choice=prompt('Add '+c.name+' to which trip?\n\n'+trips.map((t,i)=>`${i+1}. ${t.name}`).join('\n'),'1');
+  const idx=parseInt(choice)-1;
+  if(isNaN(idx)||!trips[idx]) return;
+  const t=trips[idx]; t.stops=t.stops||[];
+  t.stops.push({id:uid('s'),city:c.name,startDate:t.startDate||'',endDate:t.endDate||'',activities:[]});
+  saveTrip(t); toast(c.name+' added to '+t.name);
+}
+</script></body></html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Dashboard — Traveloop</title>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div id="nav"></div>
+<div class="container" id="main"></div>
+<footer>Made with ✦ Traveloop · Demo data is stored locally in your browser</footer>
+<script src="app.js"></script>
+<script>
+if(!requireAuth()) {} else {
+  document.getElementById('nav').innerHTML = renderNav('dashboard.html');
+  const u = currentUser();
+  const trips = getMyTrips();
+  const upcoming = trips.filter(t=>!t.startDate || new Date(t.startDate)>=new Date()).sort((a,b)=> new Date(a.startDate||0) - new Date(b.startDate||0));
+  const cities = db().cities.slice().sort((a,b)=>b.popularity-a.popularity).slice(0,6);
+
+  document.getElementById('main').innerHTML = `
+    <div class="hero">
+      <h1>Welcome, ${u.name.split(' ')[0]} 👋</h1>
+      <p>You have <b>${trips.length}</b> trip${trips.length!==1?'s':''} planned. Ready to add another adventure?</p>
+      <div style="margin-top:14px"><a class="btn primary" href="create-trip.html">+ Plan New Trip</a>
+      <a class="btn" href="trips.html">View All Trips</a></div>
+    </div>
+
+    <h2>Upcoming Trips</h2>
+    <div class="grid cols-3" id="upcoming">
+      ${ upcoming.length ? upcoming.slice(0,3).map(tripCardHTML).join('') :
+        `<div class="card empty"><h3>No upcoming trips</h3><p>Start by creating your first itinerary.</p><a class="btn primary" href="create-trip.html">+ New Trip</a></div>` }
+    </div>
+
+    <h2 style="margin-top:30px">Popular Destinations</h2>
+    <div class="grid cols-3">
+      ${cities.map(c=>`
+        <a class="card hoverable" href="cities.html?focus=${encodeURIComponent(c.name)}" style="padding:0;overflow:hidden;display:block;color:inherit">
+          <div style="height:130px;background:url('${c.img}') center/cover"></div>
+          <div style="padding:14px">
+            <div style="display:flex;justify-content:space-between"><b>${c.name}</b><span class="badge">★ ${c.popularity}</span></div>
+            <div class="muted" style="font-size:13px">${c.country} · avg ${fmt$(c.cost)}/day</div>
+          </div>
+        </a>`).join('')}
+    </div>
+
+    <h2 style="margin-top:30px">Budget Highlights</h2>
+    <div class="grid cols-2">
+      <div class="card"><div class="muted">Total planned spend</div><h2>${fmt$(trips.reduce((s,t)=>s+tripCost(t),0))}</h2></div>
+      <div class="card"><div class="muted">Cities you'll visit</div><h2>${trips.reduce((s,t)=>s+(t.stops||[]).length,0)}</h2></div>
+    </div>
+  `;
+}
+
+function tripCardHTML(t){
+  const cover = (db().cities.find(c=>c.name===((t.stops||[])[0]||{}).city)||{}).img || '';
+  return `<a class="card hoverable trip-card" href="itinerary.html?id=${t.id}" style="display:block;color:inherit">
+    <div class="cover" style="${cover?`background:url('${cover}') center/cover`:''}"></div>
+    <h3>${t.name} <span class="badge">${(t.stops||[]).length} stops</span></h3>
+    <div class="muted" style="font-size:13px">${fmtDate(t.startDate)} – ${fmtDate(t.endDate)}</div>
+    <div style="margin-top:8px"><b>${fmt$(tripCost(t))}</b> <span class="muted">est.</span></div>
+  </a>`;
+}
+</script>
+</body></html>

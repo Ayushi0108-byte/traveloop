@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>My Trips — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<div id="nav"></div>
+<div class="container">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h1>My Trips</h1>
+    <a class="btn primary" href="create-trip.html">+ New Trip</a>
+  </div>
+  <div id="list"></div>
+</div>
+<script src="app.js"></script>
+<script>
+if(!requireAuth()){} else {
+  document.getElementById('nav').innerHTML = renderNav('trips.html');
+  render();
+}
+function render(){
+  const trips = getMyTrips();
+  const el=document.getElementById('list');
+  if(!trips.length){ el.innerHTML=`<div class="card empty"><h3>No trips yet</h3><p>Create your first itinerary to get started.</p><a class="btn primary" href="create-trip.html">+ Plan a Trip</a></div>`; return;}
+  el.innerHTML = `<div class="grid cols-3">${trips.map(t=>{
+    const cover=(db().cities.find(c=>c.name===((t.stops||[])[0]||{}).city)||{}).img||'';
+    return `<div class="card trip-card">
+      <div class="cover" style="${cover?`background:url('${cover}') center/cover`:''}"></div>
+      <h3>${t.name}</h3>
+      <div class="muted" style="font-size:13px">${fmtDate(t.startDate)} – ${fmtDate(t.endDate)}</div>
+      <div style="margin:8px 0"><span class="badge">${(t.stops||[]).length} stops</span> <span class="badge">${fmt$(tripCost(t))}</span></div>
+      <p class="muted" style="font-size:13px;min-height:38px">${t.description||'No description'}</p>
+      <div class="row" style="gap:6px;margin-top:6px">
+        <a class="btn sm" href="itinerary.html?id=${t.id}">Open</a>
+        <a class="btn sm" href="budget.html?id=${t.id}">Budget</a>
+        <a class="btn sm" href="share.html?id=${t.id}">Share</a>
+        <button class="btn sm danger" onclick="if(confirm('Delete this trip?')){deleteTrip('${t.id}');render();toast('Trip deleted');}">Delete</button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+</script></body></html>

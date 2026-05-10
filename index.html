@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Traveloop — Personalized Travel Planning</title>
+<meta name="description" content="Plan multi-city trips, build itineraries, track budgets and share your journey."/>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-side">
+    <div class="brand" style="font-size:24px;margin-bottom:24px">✦ Traveloop</div>
+    <h1>Dream it.<br/>Design it.<br/>Travel it.</h1>
+    <p>Build personalized multi-city itineraries, estimate your budget, pack smart, and share your adventures with friends — all in one place.</p>
+    <ul style="color:var(--muted);line-height:2;margin-top:18px">
+      <li>🗺️ Multi-city itinerary builder</li>
+      <li>💰 Automatic cost breakdown</li>
+      <li>🎒 Per-trip packing checklist</li>
+      <li>🔗 Share trips publicly</li>
+    </ul>
+  </div>
+  <div class="auth-form">
+    <div class="card">
+      <h2 id="title">Welcome</h2>
+      <p class="muted" id="subtitle">Log in to your Traveloop account.</p>
+      <div id="nameWrap" style="display:none">
+        <label>Full name</label>
+        <input id="name" class="input" placeholder="Jane Traveler"/>
+      </div>
+      <label>Email</label>
+      <input id="email" class="input" type="email" placeholder="you@example.com"/>
+      <label>Password</label>
+      <input id="password" class="input" type="password" placeholder="••••••••"/>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0">
+        <a href="#" onclick="alert('Reset link would be emailed (demo).');return false;" class="muted" style="font-size:13px">Forgot password?</a>
+      </div>
+      <button class="btn primary" style="width:100%" id="submitBtn" onclick="submitAuth()">Log in</button>
+      <p class="muted" style="text-align:center;margin-top:14px;font-size:14px">
+        <span id="toggleText">New here?</span>
+        <a href="#" onclick="toggleMode();return false;" id="toggleLink">Create an account</a>
+      </p>
+      <div id="err" style="color:var(--danger);font-size:13px;margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+<script>
+let mode='login';
+if(currentUser()) location.href='dashboard.html';
+function toggleMode(){
+  mode = mode==='login'?'signup':'login';
+  document.getElementById('title').textContent = mode==='login'?'Welcome back':'Create your account';
+  document.getElementById('subtitle').textContent = mode==='login'?'Log in to your Traveloop account.':'Start planning unforgettable trips.';
+  document.getElementById('submitBtn').textContent = mode==='login'?'Log in':'Sign up';
+  document.getElementById('toggleText').textContent = mode==='login'?'New here?':'Already have an account?';
+  document.getElementById('toggleLink').textContent = mode==='login'?'Create an account':'Log in';
+  document.getElementById('nameWrap').style.display = mode==='login'?'none':'block';
+  document.getElementById('err').textContent='';
+}
+function submitAuth(){
+  const email=document.getElementById('email').value.trim();
+  const pwd=document.getElementById('password').value;
+  const name=document.getElementById('name').value.trim();
+  const err=document.getElementById('err');
+  err.textContent='';
+  if(!email||!pwd) return err.textContent='Email and password required.';
+  if(!/^\S+@\S+\.\S+$/.test(email)) return err.textContent='Please enter a valid email.';
+  if(pwd.length<4) return err.textContent='Password must be at least 4 characters.';
+  let res;
+  if(mode==='signup'){
+    if(!name) return err.textContent='Please enter your name.';
+    res = signup(name,email,pwd);
+  } else res = login(email,pwd);
+  if(!res.ok) return err.textContent=res.error;
+  location.href='dashboard.html';
+}
+</script>
+</body></html>

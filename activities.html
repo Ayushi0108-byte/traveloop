@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Activities — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<div id="nav"></div>
+<div class="container">
+  <h1>Discover Activities</h1>
+  <input id="q" class="input" placeholder="Search activities..." oninput="render()"/>
+  <div class="pills" id="types"></div>
+  <div id="grid" style="margin-top:14px"></div>
+</div>
+<script src="app.js"></script>
+<script>
+let activeType='';
+if(!requireAuth()){} else {
+  document.getElementById('nav').innerHTML = renderNav('activities.html');
+  const types=[...new Set(db().activities.map(a=>a.type))];
+  document.getElementById('types').innerHTML = `<span class="pill active" onclick="setType('',this)">All</span>` + types.map(t=>`<span class="pill" onclick="setType('${t}',this)">${t}</span>`).join('');
+  render();
+}
+function setType(t,el){activeType=t;document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');render();}
+function render(){
+  const q=document.getElementById('q').value.toLowerCase();
+  const list=db().activities.filter(a=>(!q||a.name.toLowerCase().includes(q)||a.city.toLowerCase().includes(q))&&(!activeType||a.type===activeType));
+  document.getElementById('grid').innerHTML = `<div class="grid cols-3">${list.map(a=>`
+    <div class="card">
+      <h3 style="margin:0">${a.name}</h3>
+      <div class="muted" style="font-size:13px">📍 ${a.city} · ${a.type}</div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px"><span class="badge">${a.duration}h</span><b>${fmt$(a.cost)}</b></div>
+      <button class="btn sm primary" style="margin-top:10px;width:100%" onclick='addToTrip(${JSON.stringify(a)})'>+ Add to Trip</button>
+    </div>`).join('')||'<div class="card empty">No matches</div>'}</div>`;
+}
+function addToTrip(a){
+  const trips=getMyTrips();
+  if(!trips.length){ alert('Create a trip first.'); return; }
+  // pick trip
+  const ti=parseInt(prompt('Add to which trip?\n'+trips.map((t,i)=>`${i+1}. ${t.name}`).join('\n'),'1'))-1;
+  const t=trips[ti]; if(!t||!t.stops||!t.stops.length){ alert('That trip has no stops yet.'); return; }
+  const si=parseInt(prompt('Which stop?\n'+t.stops.map((s,i)=>`${i+1}. ${s.city}`).join('\n'),'1'))-1;
+  if(!t.stops[si]) return;
+  t.stops[si].activities=t.stops[si].activities||[];
+  t.stops[si].activities.push({name:a.name,type:a.type,cost:a.cost,duration:a.duration});
+  saveTrip(t); toast('Added to '+t.name);
+}
+</script></body></html>

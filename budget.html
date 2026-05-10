@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Budget — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<div id="nav"></div>
+<div class="container" id="main"></div>
+<script src="app.js"></script>
+<script>
+if(!requireAuth()){} else {
+  document.getElementById('nav').innerHTML = renderNav();
+  const trip=getTrip(getQuery('id'));
+  if(!trip){ document.getElementById('main').innerHTML='<div class="empty">Trip not found</div>'; }
+  else render(trip);
+}
+function render(trip){
+  // breakdown
+  let stay=0,meals=0,acts=0,daysTotal=0;
+  const perDay=[];
+  trip.stops.forEach(s=>{
+    const days=daysBetween(s.startDate,s.endDate)+1; daysTotal+=days;
+    const city=db().cities.find(c=>c.name===s.city);
+    const stayN = (city?city.cost:0)*days;
+    const mealsN = 50*days;
+    const actsN = (s.activities||[]).reduce((x,a)=>x+(a.cost||0),0);
+    stay+=stayN; meals+=mealsN; acts+=actsN;
+    perDay.push({city:s.city, days, total:stayN+mealsN+actsN, perDay:days?(stayN+mealsN+actsN)/days:0});
+  });
+  const transport=trip.transportBudget||0;
+  const total=stay+meals+acts+transport;
+  const items=[
+    {label:'🚆 Transport',v:transport,c:'#22d3ee'},
+    {label:'🏨 Stay',v:stay,c:'#4f8cff'},
+    {label:'🍽️ Meals',v:meals,c:'#f59e0b'},
+    {label:'🎟️ Activities',v:acts,c:'#22c55e'},
+  ];
+  const budgetLimit = trip.budgetLimit||0;
+  document.getElementById('main').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap"><h1>${trip.name} — Budget</h1>
+      <a class="btn" href="itinerary.html?id=${trip.id}">← Itinerary</a></div>
+
+    <div class="grid cols-3">
+      <div class="card"><div class="muted">Estimated total</div><h2>${fmt$(total)}</h2></div>
+      <div class="card"><div class="muted">Total days</div><h2>${daysTotal}</h2></div>
+      <div class="card"><div class="muted">Avg / day</div><h2>${fmt$(daysTotal?total/daysTotal:0)}</h2></div>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:18px">
+      <div class="card">
+        <h3>Breakdown</h3>
+        ${items.map(i=>`
+          <div style="margin:10px 0">
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span>${i.label}</span><b>${fmt$(i.v)}</b></div>
+            <div class="bar"><span style="width:${total?(i.v/total*100):0}%;background:${i.c}"></span></div>
+          </div>`).join('')}
+      </div>
+      <div class="card">
+        <h3>Set a budget limit</h3>
+        <p class="muted" style="font-size:13px">Get an alert if your trip exceeds your target.</p>
+        <input id="limit" type="number" class="input" value="${budgetLimit||''}" placeholder="e.g. 3000"/>
+        <button class="btn primary" style="margin-top:10px" onclick="setLimit('${trip.id}')">Save</button>
+        ${budgetLimit?`<div style="margin-top:14px" class="${total>budgetLimit?'badge warn':'badge success'}" >${total>budgetLimit?'⚠️ Over budget by '+fmt$(total-budgetLimit):'✓ Under budget by '+fmt$(budgetLimit-total)}</div>`:''}
+      </div>
+    </div>
+
+    <h3 style="margin-top:24px">Per-stop costs</h3>
+    <div class="card">
+      ${perDay.map(p=>`
+        <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div><b>${p.city}</b><div class="muted" style="font-size:12px">${p.days} day${p.days!==1?'s':''}</div></div>
+          <div style="text-align:right"><b>${fmt$(p.total)}</b><div class="muted" style="font-size:12px">${fmt$(p.perDay)}/day</div></div>
+        </div>`).join('')||'<p class="muted">No stops yet.</p>'}
+    </div>
+  `;
+}
+function setLimit(id){
+  const t=getTrip(id); t.budgetLimit=Number(document.getElementById('limit').value)||0; saveTrip(t); toast('Budget saved'); render(t);
+}
+</script></body></html>

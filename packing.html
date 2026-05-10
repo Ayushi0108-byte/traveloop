@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Packing — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<div id="nav"></div>
+<div class="container" style="max-width:780px" id="main"></div>
+<script src="app.js"></script>
+<script>
+const CATS=['Clothing','Documents','Electronics','Toiletries','Other'];
+const STARTERS={Clothing:['T-shirts','Underwear','Socks','Jacket'],Documents:['Passport','Tickets','ID copy'],Electronics:['Phone charger','Adapter','Headphones'],Toiletries:['Toothbrush','Sunscreen','Shampoo']};
+let trip;
+if(!requireAuth()){} else {
+  document.getElementById('nav').innerHTML = renderNav();
+  trip=getTrip(getQuery('id'));
+  if(!trip){document.getElementById('main').innerHTML='<div class="empty">Trip not found</div>';} else render();
+}
+function render(){
+  const items=getPacking(trip.id);
+  const grouped={};
+  CATS.forEach(c=>grouped[c]=items.filter(i=>i.category===c));
+  const done=items.filter(i=>i.packed).length;
+  document.getElementById('main').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center"><h1>${trip.name} — Packing</h1>
+      <a class="btn" href="itinerary.html?id=${trip.id}">← Itinerary</a></div>
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between"><b>Progress</b><span>${done}/${items.length} packed</span></div>
+      <div class="bar" style="margin-top:8px"><span style="width:${items.length?(done/items.length*100):0}%"></span></div>
+      <div class="row" style="margin-top:12px">
+        <input id="newItem" class="input" placeholder="Add item..." style="flex:2"/>
+        <select id="newCat" class="select" style="flex:1">${CATS.map(c=>`<option>${c}</option>`).join('')}</select>
+        <button class="btn primary" onclick="add()">Add</button>
+        ${items.length?`<button class="btn" onclick="if(confirm('Reset all checks?')){resetPacking('${trip.id}');render();}">Reset</button>`:`<button class="btn" onclick="seed()">Add starter list</button>`}
+      </div>
+    </div>
+    ${CATS.map(c=>grouped[c].length?`
+      <div class="card" style="margin-bottom:12px">
+        <h3>${c}</h3>
+        <ul class="checklist" style="list-style:none;padding:0;margin:0">
+          ${grouped[c].map(i=>`<li>
+            <input type="checkbox" ${i.packed?'checked':''} onchange="togglePack('${i.id}');render()"/>
+            <span class="${i.packed?'done':''}" style="flex:1">${i.name}</span>
+            <button class="btn sm danger" onclick="delPack('${i.id}');render()">×</button>
+          </li>`).join('')}
+        </ul>
+      </div>`:'').join('')}
+    ${!items.length?'<div class="empty">No items yet. Add some, or click "Add starter list".</div>':''}
+  `;
+}
+function add(){const n=document.getElementById('newItem').value.trim();if(!n)return;addPack(trip.id,n,document.getElementById('newCat').value);document.getElementById('newItem').value='';render();}
+function seed(){Object.entries(STARTERS).forEach(([c,arr])=>arr.forEach(n=>addPack(trip.id,n,c)));render();}
+</script></body></html>

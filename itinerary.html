@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Itinerary — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<div id="nav"></div>
+<div class="container">
+  <div id="head"></div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" onclick="setView('list')" id="vList">List View</button>
+    <button class="btn" onclick="setView('cal')" id="vCal">Calendar View</button>
+    <span style="flex:1"></span>
+    <button class="btn primary" onclick="openAddStop()">+ Add Stop</button>
+  </div>
+  <div id="body" style="margin-top:18px"></div>
+
+  <div class="grid cols-2" style="margin-top:24px">
+    <div class="card">
+      <h3>Quick links</h3>
+      <div class="row">
+        <a class="btn" id="lkBudget">💰 Budget</a>
+        <a class="btn" id="lkPack">🎒 Packing</a>
+        <a class="btn" id="lkNotes">📝 Notes</a>
+        <a class="btn" id="lkShare">🔗 Share</a>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Trip totals</h3>
+      <div id="totals"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Stop modal -->
+<div class="modal-bg" id="modalStop"><div class="modal">
+  <h3>Add a Stop</h3>
+  <label>City</label>
+  <select id="stopCity" class="select"></select>
+  <div class="row">
+    <div style="flex:1"><label>Arrive</label><input id="stopStart" type="date" class="input"/></div>
+    <div style="flex:1"><label>Depart</label><input id="stopEnd" type="date" class="input"/></div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:12px">
+    <button class="btn primary" onclick="addStop()">Add Stop</button>
+    <button class="btn" onclick="closeModal('modalStop')">Cancel</button>
+  </div>
+</div></div>
+
+<!-- Add Activity modal -->
+<div class="modal-bg" id="modalAct"><div class="modal">
+  <h3>Add Activity</h3>
+  <input id="actSearch" class="input" placeholder="Search activities..." oninput="renderActChoices()"/>
+  <div id="actList" style="max-height:320px;overflow:auto;margin-top:10px"></div>
+  <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
+    <p class="muted" style="font-size:13px;margin:0 0 6px">Or add a custom activity:</p>
+    <input id="cName" class="input" placeholder="Name"/>
+    <div class="row" style="margin-top:8px">
+      <input id="cCost" type="number" class="input" placeholder="Cost ($)" style="flex:1"/>
+      <input id="cDur" type="number" class="input" placeholder="Duration (h)" style="flex:1"/>
+    </div>
+    <button class="btn primary" style="margin-top:10px" onclick="addCustomAct()">Add Custom</button>
+  </div>
+  <div style="margin-top:10px;text-align:right"><button class="btn" onclick="closeModal('modalAct')">Close</button></div>
+</div></div>
+
+<script src="app.js"></script>
+<script>
+let trip, view='list', activeStopIdx=0;
+if(!requireAuth()){} else {
+  document.getElementById('nav').innerHTML = renderNav();
+  trip = getTrip(getQuery('id'));
+  if(!trip){ document.body.innerHTML='<div class="container empty"><h2>Trip not found</h2><a class="btn" href="trips.html">Back</a></div>'; }
+  else { ['lkBudget','budget'],['lkPack','packing'],['lkNotes','notes'],['lkShare','share'].forEach; 
+    document.getElementById('lkBudget').href='budget.html?id='+trip.id;
+    document.getElementById('lkPack').href='packing.html?id='+trip.id;
+    document.getElementById('lkNotes').href='notes.html?id='+trip.id;
+    document.getElementById('lkShare').href='share.html?id='+trip.id;
+    render();
+  }
+}
+function setView(v){view=v;render();}
+function render(){
+  document.getElementById('head').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+      <div>
+        <h1 style="margin-bottom:4px">${trip.name}</h1>
+        <div class="muted">${fmtDate(trip.startDate)} – ${fmtDate(trip.endDate)} · ${(trip.stops||[]).length} stops</div>
+        ${trip.description?`<p class="muted" style="max-width:700px">${trip.description}</p>`:''}
+      </div>
+      <div><a class="btn" href="trips.html">← Trips</a></div>
+    </div>`;
+  document.getElementById('vList').className='btn'+(view==='list'?' primary':'');
+  document.getElementById('vCal').className='btn'+(view==='cal'?' primary':'');
+
+  const body=document.getElementById('body');
+  if(!trip.stops.length){
+    body.innerHTML=`<div class="card empty"><h3>No stops yet</h3><p>Add your first city to start building your itinerary.</p><button class="btn primary" onclick="openAddStop()">+ Add Stop</button></div>`;
+  } else if(view==='list') body.innerHTML = renderList();
+  else body.innerHTML = renderCal();
+
+  // totals
+  const tot = tripCost(trip);
+  const days = (trip.stops||[]).reduce((s,st)=>s+daysBetween(st.startDate,st.endDate)+1,0);
+  document.getElementById('totals').innerHTML = `
+    <div style="display:flex;gap:18px;flex-wrap:wrap">
+      <div><div class="muted" style="font-size:12px">Estimated total</div><h2 style="margin:0">${fmt$(tot)}</h2></div>
+      <div><div class="muted" style="font-size:12px">Total days</div><h2 style="margin:0">${days}</h2></div>
+      <div><div class="muted" style="font-size:12px">Avg / day</div><h2 style="margin:0">${fmt$(days?tot/days:0)}</h2></div>
+    </div>`;
+}
+function renderList(){
+  return trip.stops.map((s,i)=>{
+    const city=db().cities.find(c=>c.name===s.city);
+    return `<div class="card" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <h3 style="margin:0">📍 ${s.city} <span class="badge">${(city?city.country:'')}</span></h3>
+          <div class="muted" style="font-size:13px">${fmtDate(s.startDate)} – ${fmtDate(s.endDate)} · ${daysBetween(s.startDate,s.endDate)+1} days</div>
+        </div>
+        <div class="row" style="gap:6px">
+          ${i>0?`<button class="btn sm" onclick="moveStop(${i},-1)">↑</button>`:''}
+          ${i<trip.stops.length-1?`<button class="btn sm" onclick="moveStop(${i},1)">↓</button>`:''}
+          <button class="btn sm primary" onclick="openAddAct(${i})">+ Activity</button>
+          <button class="btn sm danger" onclick="if(confirm('Remove stop?')){trip.stops.splice(${i},1);saveTrip(trip);render();}">Remove</button>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        ${(s.activities||[]).length? s.activities.map((a,j)=>`
+          <div class="activity">
+            <div><b>${a.name}</b><div class="meta">${a.type||'Custom'} · ${a.duration||1}h</div></div>
+            <div style="text-align:right"><b>${fmt$(a.cost||0)}</b><div><button class="btn sm danger" onclick="trip.stops[${i}].activities.splice(${j},1);saveTrip(trip);render()">×</button></div></div>
+          </div>`).join('') : '<p class="muted" style="margin:0">No activities yet — add some to enrich your stop.</p>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderCal(){
+  // group by date
+  const cells=[];
+  trip.stops.forEach(s=>{
+    const start=new Date(s.startDate), end=new Date(s.endDate);
+    if(isNaN(start)||isNaN(end)) return;
+    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+      cells.push({date:new Date(d), city:s.city, acts:s.activities||[]});
+    }
+  });
+  if(!cells.length) return '<div class="card empty">Set dates on your stops to see the calendar.</div>';
+  return `<div class="grid cols-3">${cells.map(c=>`
+    <div class="card">
+      <div class="muted" style="font-size:12px">${c.date.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}</div>
+      <h3 style="margin:6px 0">${c.city}</h3>
+      ${c.acts.slice(0,3).map(a=>`<div class="activity"><div>${a.name}</div><div>${fmt$(a.cost||0)}</div></div>`).join('')||'<p class="muted">Free day</p>'}
+    </div>`).join('')}</div>`;
+}
+function openAddStop(){
+  const sel=document.getElementById('stopCity');
+  sel.innerHTML = db().cities.map(c=>`<option value="${c.name}">${c.name}, ${c.country}</option>`).join('');
+  if(trip.startDate) document.getElementById('stopStart').value=trip.startDate;
+  if(trip.endDate) document.getElementById('stopEnd').value=trip.endDate;
+  document.getElementById('modalStop').classList.add('show');
+}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+function addStop(){
+  const city=document.getElementById('stopCity').value;
+  const sd=document.getElementById('stopStart').value;
+  const ed=document.getElementById('stopEnd').value;
+  trip.stops.push({id:uid('s'),city,startDate:sd,endDate:ed,activities:[]});
+  saveTrip(trip); closeModal('modalStop'); toast('Stop added'); render();
+}
+function moveStop(i,dir){
+  const j=i+dir; if(j<0||j>=trip.stops.length) return;
+  [trip.stops[i],trip.stops[j]]=[trip.stops[j],trip.stops[i]]; saveTrip(trip); render();
+}
+function openAddAct(i){activeStopIdx=i;document.getElementById('actSearch').value='';renderActChoices();document.getElementById('modalAct').classList.add('show');}
+function renderActChoices(){
+  const q=(document.getElementById('actSearch').value||'').toLowerCase();
+  const stop=trip.stops[activeStopIdx];
+  const suggested = db().activities.filter(a=> (!q||a.name.toLowerCase().includes(q)||a.type.toLowerCase().includes(q)) );
+  // bubble matching city to top
+  suggested.sort((a,b)=>(b.city===stop.city?1:0)-(a.city===stop.city?1:0));
+  document.getElementById('actList').innerHTML = suggested.slice(0,30).map(a=>`
+    <div class="activity"><div><b>${a.name}</b><div class="meta">${a.city} · ${a.type} · ${a.duration}h</div></div>
+    <div style="text-align:right"><b>${fmt$(a.cost)}</b><div><button class="btn sm primary" onclick='addAct(${JSON.stringify(a)})'>Add</button></div></div></div>
+  `).join('') || '<p class="muted">No matches</p>';
+}
+function addAct(a){
+  trip.stops[activeStopIdx].activities=trip.stops[activeStopIdx].activities||[];
+  trip.stops[activeStopIdx].activities.push({name:a.name,type:a.type,cost:a.cost,duration:a.duration});
+  saveTrip(trip); toast('Activity added'); closeModal('modalAct'); render();
+}
+function addCustomAct(){
+  const n=document.getElementById('cName').value.trim();
+  if(!n) return;
+  trip.stops[activeStopIdx].activities=trip.stops[activeStopIdx].activities||[];
+  trip.stops[activeStopIdx].activities.push({name:n,type:'Custom',cost:Number(document.getElementById('cCost').value)||0,duration:Number(document.getElementById('cDur').value)||1});
+  document.getElementById('cName').value='';document.getElementById('cCost').value='';document.getElementById('cDur').value='';
+  saveTrip(trip); toast('Custom activity added'); closeModal('modalAct'); render();
+}
+</script>
+</body></html>

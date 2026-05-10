@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Public Itinerary — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<nav class="nav"><div class="nav-inner"><a href="index.html" class="brand">✦ Traveloop</a><a class="btn" href="index.html">Sign up</a></div></nav>
+<div class="container" id="main"></div>
+<script src="app.js"></script>
+<script>
+const trip=getTrip(getQuery('id'));
+const main=document.getElementById('main');
+if(!trip||!trip.shared){ main.innerHTML='<div class="empty"><h2>This trip isn\'t shared</h2><p>The owner hasn\'t made it public.</p></div>'; }
+else {
+  const total=tripCost(trip);
+  main.innerHTML=`
+    <div class="hero"><h1>${trip.name}</h1>
+      <p>${fmtDate(trip.startDate)} – ${fmtDate(trip.endDate)} · ${(trip.stops||[]).length} stops · ${fmt$(total)} estimated</p>
+      ${trip.description?`<p class="muted">${trip.description}</p>`:''}
+      <button class="btn primary" onclick="copyTrip()">📋 Copy this trip</button>
+    </div>
+    ${trip.stops.map(s=>{
+      const days=daysBetween(s.startDate,s.endDate)+1;
+      return `<div class="card" style="margin-bottom:14px">
+        <h3>📍 ${s.city}</h3>
+        <div class="muted" style="font-size:13px">${fmtDate(s.startDate)} – ${fmtDate(s.endDate)} · ${days} day${days!==1?'s':''}</div>
+        ${(s.activities||[]).map(a=>`<div class="activity"><div><b>${a.name}</b><div class="meta">${a.type}·${a.duration}h</div></div><div><b>${fmt$(a.cost||0)}</b></div></div>`).join('')||'<p class="muted">No activities listed</p>'}
+      </div>`;
+    }).join('')}`;
+}
+function copyTrip(){
+  if(!currentUser()){ alert('Log in to copy this trip.'); location.href='index.html'; return; }
+  const t=JSON.parse(JSON.stringify(trip));
+  t.id=uid('t'); t.userId=currentUser().id; t.name=t.name+' (copy)'; t.shared=false; t.createdAt=Date.now();
+  saveTrip(t); toast('Trip copied to your account'); setTimeout(()=>location.href='itinerary.html?id='+t.id,500);
+}
+</script></body></html>

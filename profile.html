@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Profile — Traveloop</title><link rel="stylesheet" href="styles.css"/></head>
+<body>
+<div id="nav"></div>
+<div class="container" style="max-width:680px" id="main"></div>
+<script src="app.js"></script>
+<script>
+if(!requireAuth()){} else {
+  document.getElementById('nav').innerHTML = renderNav();
+  const u=currentUser();
+  document.getElementById('main').innerHTML=`
+    <h1>Profile & Settings</h1>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:14px"><div class="avatar" style="width:60px;height:60px;font-size:22px">${u.name.split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}</div>
+      <div><b>${u.name}</b><div class="muted">${u.email}</div></div></div>
+      <label>Full name</label><input id="name" class="input" value="${u.name}"/>
+      <label>Email</label><input id="email" class="input" value="${u.email}"/>
+      <label>Language</label><select id="lang" class="select"><option>English</option><option>Spanish</option><option>French</option><option>German</option><option>Japanese</option></select>
+      <div style="margin-top:14px;display:flex;gap:10px">
+        <button class="btn primary" onclick="saveU()">Save changes</button>
+        <button class="btn danger" onclick="if(confirm('Delete account? All data will be lost.')){deleteAccount()}">Delete account</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Saved destinations</h3>
+      <p class="muted">Cities from your trips:</p>
+      <div class="pills">${[...new Set(getMyTrips().flatMap(t=>(t.stops||[]).map(s=>s.city)))].map(c=>`<span class="pill">${c}</span>`).join('')||'<span class="muted">None yet</span>'}</div>
+    </div>`;
+}
+function saveU(){const d=db();const u=d.users.find(x=>x.id===currentUser().id);u.name=document.getElementById('name').value;u.email=document.getElementById('email').value;save(d);toast('Profile saved');}
+function deleteAccount(){const d=db();const id=currentUser().id;d.users=d.users.filter(u=>u.id!==id);d.trips=d.trips.filter(t=>t.userId!==id);save(d);logout();}
+</script></body></html>
